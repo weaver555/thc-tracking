@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>THC Delivery Tracker - Home</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .container { background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 500px; width: 100%; padding: 40px; text-align: center; }
+        h1 { color: #333; margin-bottom: 10px; font-size: 28px; }
+        .logo { font-size: 48px; margin-bottom: 20px; }
+        .subtitle { color: #666; margin-bottom: 40px; font-size: 16px; }
+        .button-group { display: flex; flex-direction: column; gap: 15px; }
+        .btn { padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.3s; }
+        .btn-customer { background: #28a745; color: white; }
+        .btn-customer:hover { background: #218838; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(40,167,69,0.3); }
+        .btn-rider { background: #0084ff; color: white; }
+        .btn-rider:hover { background: #0073e6; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,132,255,0.3); }
+        .btn-help { background: #ffc107; color: #333; }
+        .btn-help:hover { background: #ffb300; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(255,193,7,0.3); }
+        .info-box { background: #f0f8ff; border-left: 4px solid #0084ff; padding: 15px; margin-top: 30px; text-align: left; border-radius: 8px; font-size: 14px; color: #333; line-height: 1.6; }
+        .info-box strong { color: #0084ff; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="logo">🚴‍♂️📍</div>
+        <h1>THC Delivery Tracker</h1>
+        <p class="subtitle">Real-time order tracking & delivery management</p>
+        
+        <div class="button-group">
+            <button class="btn btn-customer" onclick="window.location.href='track.html'">
+                📱 I'm a Customer - Track My Order
+            </button>
+            <button class="btn btn-rider" onclick="window.location.href='rider.html'">
+                👨‍💼 I'm a Rider - Go Active & Deliver
+            </button>
+            <button class="btn btn-help" onclick="window.location.href='instructions.html'">
+                ❓ How to Use - Instructions
+            </button>
+        </div>
+
+        <div class="info-box">
+            <strong>👉 For Customers:</strong> Ask the rider for your tracking link or enter your order ID<br>
+            <strong>👉 For Riders:</strong> Sign in and enter your order ID to start tracking
+        </div>
+    </div>
+</body>
+</html>
