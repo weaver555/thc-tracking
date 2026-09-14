@@ -3,18 +3,19 @@
 <head>
     <title>Rider Secure Console</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- Firebase Core, Auth, and Database Services -->
+    <!-- CRUCIAL: Core SDKs must load completely first -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; background: #f4f6f9; color: #333; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; text-align: center; padding: 20px; background: #f4f6f9; color: #333; }
         .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 380px; margin: 40px auto; }
         h2 { margin-bottom: 20px; color: #1a73e8; }
         input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #dadce0; box-sizing: border-box; font-size: 16px; }
         button { background: #1a73e8; color: white; border: none; font-weight: bold; cursor: pointer; transition: background 0.2s; }
         button:hover { background: #1557b0; }
-        #status { color: #28a745; font-weight: bold; margin-top: 15px; display: none; }
+        #status { color: #28a745; font-weight: bold; margin-top: 15px; display: block; background: #e6f4ea; padding: 10px; border-radius: 6px; }
+        .error-msg { color: #d93025 !important; background: #fce8e6 !important; }
         .hidden { display: none !important; }
     </style>
 </head>
@@ -22,27 +23,27 @@
     <div class="card">
         <h2>Rider Console</h2>
         
-        <!-- Login Interface Form -->
+        <!-- Login Form Layout -->
         <div id="login-section">
-            <input type="email" id="email" placeholder="Rider Email">
-            <input type="password" id="password" placeholder="Password">
-            <button onclick="loginRider()">Sign In to Shift</button>
+            <input type="email" id="riderEmailInput" placeholder="Rider Email">
+            <input type="password" id="riderPasswordInput" placeholder="Password">
+            <button type="button" onclick="executeSecureLogin()">Sign In to Shift</button>
         </div>
 
-        <!-- Live Status Tracking Form (Hidden until Secure Authentication) -->
+        <!-- Active Tracking Panel Layout -->
         <div id="tracking-section" class="hidden">
             <p>Welcome, <span id="rider-email-display" style="font-weight:bold;"></span></p>
             <input type="text" id="orderId" placeholder="Enter Loyverse Order ID">
-            <button onclick="startTracking()" style="background: #28a745;">Go Active & Start Tracking</button>
-            <button onclick="logoutRider()" style="background: #dc3545; margin-top: 20px;">Sign Out</button>
+            <button type="button" onclick="startTracking()" style="background: #28a745;">Go Active & Start Tracking</button>
+            <button type="button" onclick="logoutRider()" style="background: #dc3545; margin-top: 20px;">Sign Out</button>
         </div>
         
-        <div id="status">Status: Ready</div>
+        <div id="status">Status: Ready to connect...</div>
     </div>
 
     <script>
-        // Exact configuration properties matching your database nodes
-                      const firebaseConfig = {
+        // Verified Firebase Setup Configurations parameters
+        const firebaseConfig = {
             apiKey: "AIzaSyC57agn1E9fIWBY1Zls4HggsKwKsQAwBoQ",
             authDomain: "://firebaseapp.com",
             databaseURL: "https://firebasedatabase.app",
@@ -51,34 +52,58 @@
             messagingSenderId: "1020694020459",
             appId: "1:1020694020459:web:3abf81418fec72af168c2e"
         };
+        
+        // Safety Catch to ensure Firebase libraries loaded successfully
+        try {
+            firebase.initializeApp(firebaseConfig);
+            document.getElementById('status').innerText = "System Diagnostic: Network Connected.";
+        } catch (setupError) {
+            document.getElementById('status').classList.add('error-msg');
+            document.getElementById('status').innerText = "Setup Error: " + setupError.message;
+        }
 
-        firebase.initializeApp(firebaseConfig);
         const auth = firebase.auth();
         const database = firebase.database();
-
         let watchId = null;
         let currentRiderId = null;
 
-        // Monitor Login Status
+        // Monitor persistent authentication state transitions
         auth.onAuthStateChanged((user) => {
             if (user) {
                 currentRiderId = user.uid;
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('tracking-section').classList.remove('hidden');
                 document.getElementById('rider-email-display').innerText = user.email;
-                document.getElementById('status').style.display = "block";
-                document.getElementById('status').innerText = "Logged in. Ready for order.";
+                document.getElementById('status').classList.remove('error-msg');
+                document.getElementById('status').innerText = "Active Shift Session Loaded.";
             } else {
                 document.getElementById('login-section').classList.remove('hidden');
                 document.getElementById('tracking-section').classList.add('hidden');
-                document.getElementById('status').style.display = "none";
+                document.getElementById('status').classList.remove('error-msg');
+                document.getElementById('status').innerText = "Logged out. Ready for sign-in.";
             }
         });
 
-        function loginRider() {
-            const email = document.getElementById('email').value.trim();
-            const password = document.getElementById('password').value;
-            auth.signInWithEmailAndPassword(email, password).catch(err => alert("Login Failed: " + err.message));
+        function executeSecureLogin() {
+            const email = document.getElementById('riderEmailInput').value.trim();
+            const password = document.getElementById('riderPasswordInput').value;
+            
+            if(!email || !password) { 
+                alert("Please type your employee email and password credentials."); 
+                return; 
+            }
+            
+            document.getElementById('status').innerText = "Processing server authentication credentials...";
+
+            auth.signInWithEmailAndPassword(email, password)
+                .then(() => {
+                    document.getElementById('status').innerText = "Login Approved! Redirecting...";
+                })
+                .catch(err => {
+                    document.getElementById('status').classList.add('error-msg');
+                    document.getElementById('status').innerText = "Error: Login Denied.";
+                    alert("Firebase Rejection: " + err.message);
+                });
         }
 
         function logoutRider() {
@@ -88,30 +113,36 @@
 
         function startTracking() {
             const orderId = document.getElementById('orderId').value.trim();
-            if (!orderId) { alert('Please enter an Order ID'); return; }
+            if (!orderId) { alert('Please enter a Loyverse Order number.'); return; }
 
             if (navigator.geolocation) {
-                document.getElementById('status').innerText = "Fetching high-precision GPS...";
+                document.getElementById('status').innerText = "Verifying high-precision mobile GPS data...";
                 
                 watchId = navigator.geolocation.watchPosition((position) => {
                     const lat = position.coords.latitude;
                     const lng = position.coords.longitude;
                     
-                    // Broadcast raw coordinates linked to the active driver ID and target Order ID
                     database.ref('active_riders/' + currentRiderId).set({
                         lat: lat,
                         lng: lng,
                         orderId: orderId,
                         status: "Out for Delivery",
                         updatedAt: Date.now()
+                    }).then(() => {
+                        document.getElementById('status').classList.remove('error-msg');
+                        document.getElementById('status').innerText = `Live tracking broadcast active for Order #${orderId}!`;
+                    }).catch(err => {
+                        document.getElementById('status').classList.add('error-msg');
+                        document.getElementById('status').innerText = "Write Blocked: " + err.message;
                     });
                     
-                    document.getElementById('status').innerText = `Broadcasting live to Order #${orderId}!`;
                 }, (error) => {
-                    document.getElementById('status').innerText = "GPS Error: " + error.message;
+                    document.getElementById('status').classList.add('error-msg');
+                    document.getElementById('status').innerText = "GPS Tracking Interrupted: " + error.message;
+                    alert("Please turn on your phone's location services and allow app permission.");
                 }, { enableHighAccuracy: true, maximumAge: 0 });
             } else {
-                alert("GPS location services are not supported by this phone.");
+                alert("GPS functionality is not supported by this browser version.");
             }
         }
     </script>
