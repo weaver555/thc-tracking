@@ -3,11 +3,9 @@
 <head>
     <title>Rider Secure Console</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-      <!-- 1. Add correct Firebase v8 SDK scripts in your <head> -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
-
     <style>
         body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 20px; background: #f4f6f9; color: #333; }
         .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 380px; margin: 40px auto; }
@@ -36,19 +34,16 @@
         <div id="status">Status: Ready to connect...</div>
     </div>
     <script>
-               const firebaseConfig = {
-    apiKey: "AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",
-    authDomain: "thc-rider-tracker.firebaseapp.com",
-    databaseURL: "https://thc-rider-tracker-default-rtdb.asia-southeast1.firebasedatabase.app", 
-    projectId: "thc-rider-tracker",
-    storageBucket: "thc-rider-tracker.appspot.com",
-    messagingSenderId: "1020694020459",
-    appId: "1:1020694020459:web:3abf81418fec72af168c2e"
-};
-
-
+        const firebaseConfig = {
+            apiKey: "AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",
+            authDomain: "thc-rider-tracker.firebaseapp.com",
+            databaseURL: "https://thc-rider-tracker-default-rtdb.asia-southeast1.firebasedatabase.app", 
+            projectId: "thc-rider-tracker",
+            storageBucket: "thc-rider-tracker.appspot.com",
+            messagingSenderId: "1020694020459",
+            appId: "1:1020694020459:web:3abf81418fec72af168c2e"
+        };
         
-        // Helper function to reset status styles smoothly
         function updateStatus(text, isError = false) {
             const statusDiv = document.getElementById('status');
             statusDiv.innerText = text;
