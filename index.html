@@ -70,7 +70,7 @@
                             riderMarker = new google.maps.Marker({
                                 position: position,
                                 map: map,
-                                icon: { url: "https://google.com" }
+                                icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
                             });
                         }
                         map.panTo(position);
@@ -79,7 +79,9 @@
                 if (!riderFound) { document.getElementById('status-text').innerText = "Rider is offline or preparing."; }
             });
         }
+
+        window.addEventListener('load', initMap);
     </script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ&callback=initMap" async defer></script>
+<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ&libraries=maps&callback=initMap" async defer></script>
 </body>
 </html>
