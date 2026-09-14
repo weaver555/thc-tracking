@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Rider Secure Console</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Firebase Core, Auth, and Database Services -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; padding: 20px; background: #f4f6f9; color: #333; }
+        .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 380px; margin: 40px auto; }
+        h2 { margin-bottom: 20px; color: #1a73e8; }
+        input, button { width: 100%; padding: 12px; margin: 10px 0; border-radius: 6px; border: 1px solid #dadce0; box-sizing: border-box; font-size: 16px; }
+        button { background: #1a73e8; color: white; border: none; font-weight: bold; cursor: pointer; transition: background 0.2s; }
+        button:hover { background: #1557b0; }
+        #status { color: #28a745; font-weight: bold; margin-top: 15px; display: none; }
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h2>Rider Console</h2>
+        
+        <!-- Login Interface Form -->
+        <div id="login-section">
+            <input type="email" id="email" placeholder="Rider Email">
+            <input type="password" id="password" placeholder="Password">
+            <button onclick="loginRider()">Sign In to Shift</button>
+        </div>
+
+        <!-- Live Status Tracking Form (Hidden until Secure Authentication) -->
+        <div id="tracking-section" class="hidden">
+            <p>Welcome, <span id="rider-email-display" style="font-weight:bold;"></span></p>
+            <input type="text" id="orderId" placeholder="Enter Loyverse Order ID">
+            <button onclick="startTracking()" style="background: #28a745;">Go Active & Start Tracking</button>
+            <button onclick="logoutRider()" style="background: #dc3545; margin-top: 20px;">Sign Out</button>
+        </div>
+        
+        <div id="status">Status: Ready</div>
+    </div>
+
+    <script>
+        // Exact configuration properties matching your database nodes
+        const firebaseConfig = {
+            apiKey: "AIzaSyC57agn1E9fUWBY1Zls4HggsKwKsQAwBoQ",
+            authDomain: "://firebaseapp.com",
+            databaseURL: "https://firebasedatabase.app",
+            projectId: "thc-rider-tracker",
+            storageBucket: "://appspot.com",
+            messagingSenderId: "1020694020459",
+            appId: "1:1020694020459:web:3abf81418fec72af168c2e"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const auth = firebase.auth();
+        const database = firebase.database();
+
+        let watchId = null;
+        let currentRiderId = null;
+
+        // Monitor Login Status
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentRiderId = user.uid;
+                document.getElementById('login-section').classList.add('hidden');
+                document.getElementById('tracking-section').classList.remove('hidden');
+                document.getElementById('rider-email-display').innerText = user.email;
+                document.getElementById('status').style.display = "block";
+                document.getElementById('status').innerText = "Logged in. Ready for order.";
+            } else {
+                document.getElementById('login-section').classList.remove('hidden');
+                document.getElementById('tracking-section').classList.add('hidden');
+                document.getElementById('status').style.display = "none";
+            }
+        });
+
+        function loginRider() {
+            const email = document.getElementById('email').value.trim();
+            const password = document.getElementById('password').value;
+            auth.signInWithEmailAndPassword(email, password).catch(err => alert("Login Failed: " + err.message));
+        }
+
+        function logoutRider() {
+            if (watchId) navigator.geolocation.clearWatch(watchId);
+            auth.signOut();
+        }
+
+        function startTracking() {
+            const orderId = document.getElementById('orderId').value.trim();
+            if (!orderId) { alert('Please enter an Order ID'); return; }
+
+            if (navigator.geolocation) {
+                document.getElementById('status').innerText = "Fetching high-precision GPS...";
+                
+                watchId = navigator.geolocation.watchPosition((position) => {
+                    const lat = position.coords.latitude;
+                    const lng = position.coords.longitude;
+                    
+                    // Broadcast raw coordinates linked to the active driver ID and target Order ID
+                    database.ref('active_riders/' + currentRiderId).set({
+                        lat: lat,
+                        lng: lng,
+                        orderId: orderId,
+                        status: "Out for Delivery",
+                        updatedAt: Date.now()
+                    });
+                    
+                    document.getElementById('status').innerText = `Broadcasting live to Order #${orderId}!`;
+                }, (error) => {
+                    document.getElementById('status').innerText = "GPS Error: " + error.message;
+                }, { enableHighAccuracy: true, maximumAge: 0 });
+            } else {
+                alert("GPS location services are not supported by this phone.");
+            }
+        }
+    </script>
+</body>
+</html>
