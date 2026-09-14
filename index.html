@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Live Delivery Tracker</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <!-- Firebase Core and Database Services -->
+    <script src="https://gstatic.com"></script>
+    <script src="https://gstatic.com"></script>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background: #e5e5e5; }
+        #map { flex-grow: 1; width: 100%; height: 100%; }
+        .info-panel { padding: 20px; background: white; box-shadow: 0 -3px 15px rgba(0,0,0,0.15); text-align: center; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 999; }
+        .btn-group { display: flex; gap: 12px; margin-top: 15px; }
+        .btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-weight: bold; text-decoration: none; text-align: center; color: white; font-size: 15px; }
+        .btn-msg { background: #0084ff; }
+        .btn-call { background: #25d366; }
+        h3 { margin: 0 0 5px 0; color: #202124; }
+    </style>
+</head>
+<body>
+
+    <div id="map"></div>
+    
+    <div class="info-panel">
+        <h3 id="status-text">Searching for active rider...</h3>
+        <div class="btn-group">
+            <a href="https://m.me/dhungrychefs" class="btn btn-msg" target="_blank">Message Shop</a>
+            <a href="tel:+639171234567" class="btn btn-call">Call Rider</a>
+        </div>
+    </div>
+
+    <script>
+        // PASTE YOUR EXACT FIREBASE CONFIG DETAILS HERE
+        const firebaseConfig = {
+            apiKey: "AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",
+            authDomain: "thc-rider-tracker.firebaseapp.com",
+            databaseURL: https://thc-rider-tracker-default-rtdb.asia-southeast1.firebasedatabase.app/,
+            projectId: "thc-rider-tracker",
+            storageBucket: "thc-rider-tracker.firebasestorage.app",
+            messagingSenderId: "1020694020459",
+            appId: "1:1020694020459:web:3abf81418fec72af168c2e"
+        };
+        firebase.initializeApp(firebaseConfig);
+        const database = firebase.database();
+
+        let map;
+        let riderMarker;
+        const urlParams = new URLSearchParams(window.location.search);
+        const targetOrder = urlParams.get('order');
+
+        // Initialize Google Map over Macrohon/Maasin region coordinates
+        function initMap() {
+            map = new google.maps.Map(document.getElementById("map"), {
+                zoom: 15,
+                center: { lat: 10.1300, lng: 124.8400 },
+                mapTypeControl: false,
+                streetViewControl: false
+            });
+
+            if (targetOrder) {
+                listenForActiveRider();
+            } else {
+                document.getElementById('status-text').innerText = "Error: Invalid Tracking URL link.";
+            }
+        }
+
+        // Search the active_riders node for the one handling this customer's Order ID
+        function listenForActiveRider() {
+            database.ref('active_riders').on('value', (snapshot) => {
+                let riderFound = false;
+                
+                snapshot.forEach((childSnapshot) => {
+                    const data = childSnapshot.val();
+                    if (data.orderId === targetOrder) {
+                        riderFound = true;
+                        document.getElementById('status-text').innerText = "Rider Status: " + data.status;
+                        
+                        const position = { lat: data.lat, lng: data.lng };
+
+                        if (riderMarker) {
+                            riderMarker.setPosition(position);
+                        } else {
+                            // Places a bicycle icon marker on Google Maps for the rider
+                            riderMarker = new google.maps.Marker({
+                                position: position,
+                                map: map,
+                                title: "Your Delivery Rider",
+                                icon: {
+                                    url: "https://google.com"
+                                }
+                            });
+                        }
+                        map.panTo(position);
+                    }
+                });
+
+                if (!riderFound) {
+                    document.getElementById('status-text').innerText = "Rider is currently preparing or offline.";
+                }
+            });
+        }
+    </script>
+
+    <!-- Google Maps Script Loader — PASTE YOUR GOOGLE MAPS API KEY BELOW -->
+    <script src="https://googleapis.com" async defer></script>
+</body>
+</html>
