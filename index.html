@@ -1,87 +1,43 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>Live Delivery Tracker</title>
+    <title>THC Delivery - Order & Track</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
-<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
-
     <style>
-        body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background: #e5e5e5; }
-        #map { flex-grow: 1; width: 100%; height: 100%; }
-        .info-panel { padding: 20px; background: white; box-shadow: 0 -3px 15px rgba(0,0,0,0.15); text-align: center; border-top-left-radius: 16px; border-top-right-radius: 16px; z-index: 999; }
-        .btn-group { display: flex; gap: 12px; margin-top: 15px; }
-        .btn { flex: 1; padding: 14px; border: none; border-radius: 8px; font-weight: bold; text-decoration: none; text-align: center; color: white; font-size: 15px; }
-        .btn-msg { background: #0084ff; }
-        .btn-call { background: #25d366; }
-        h3 { margin: 0 0 5px 0; color: #202124; }
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
+        .container { background: white; border-radius: 16px; box-shadow: 0 10px 40px rgba(0,0,0,0.2); max-width: 500px; width: 100%; padding: 40px; text-align: center; }
+        h1 { color: #333; margin-bottom: 10px; font-size: 28px; }
+        .logo { font-size: 48px; margin-bottom: 20px; }
+        .subtitle { color: #666; margin-bottom: 40px; font-size: 16px; }
+        .button-group { display: flex; flex-direction: column; gap: 15px; }
+        .btn { padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.3s; }
+        .btn-order { background: #28a745; color: white; }
+        .btn-order:hover { background: #218838; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(40,167,69,0.3); }
+        .btn-rider { background: #0084ff; color: white; }
+        .btn-rider:hover { background: #0073e6; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,132,255,0.3); }
+        .btn-track { background: #ffc107; color: #333; }
+        .btn-track:hover { background: #ffb300; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(255,193,7,0.3); }
+        .info-box { background: #f0f8ff; border-left: 4px solid #0084ff; padding: 15px; margin-top: 30px; text-align: left; border-radius: 8px; font-size: 14px; color: #333; line-height: 1.6; }
+        .info-box strong { color: #0084ff; }
     </style>
 </head>
 <body>
-    <div id="map"></div>
-    <div class="info-panel">
-        <h3 id="status-text">Searching for active rider...</h3>
-        <div class="btn-group">
-            <a href="https://m.me" class="btn btn-msg" target="_blank">Message Shop</a>
-            <a href="tel:+639171234567" class="btn btn-call">Call Rider</a>
+    <div class="container">
+        <div class="logo">🍕📍</div>
+        <h1>THC Delivery</h1>
+        <p class="subtitle">Fast food. Real-time tracking.</p>
+        
+        <div class="button-group">
+            <a href="order.html" class="btn btn-order">📝 Place New Order</a>
+            <a href="rider.html" class="btn btn-rider">🚴‍♂️ Rider Console</a>
+            <a href="track.html" class="btn btn-track">📍 Track My Order</a>
+        </div>
+
+        <div class="info-box">
+            <strong>👉 Customers:</strong> Place order & track delivery in real-time<br>
+            <strong>👉 Riders:</strong> Accept orders & deliver with live GPS tracking
         </div>
     </div>
-    <script>
-        const firebaseConfig = {
-    apiKey: "AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",
-    authDomain: "thc-rider-tracker.firebaseapp.com",
-    databaseURL: "https://thc-rider-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",
-    projectId: "thc-rider-tracker",
-    storageBucket: "thc-rider-tracker.appspot.com",
-    messagingSenderId: "1020694020459",
-    appId: "1:1020694020459:web:3abf81418fec72af168c2e"
-};
-
-        firebase.initializeApp(firebaseConfig);
-        const database = firebase.database();
-
-        let map;
-        let riderMarker;
-        const urlParams = new URLSearchParams(window.location.search);
-        const targetOrder = urlParams.get('order');
-
-        function initMap() {
-            map = new google.maps.Map(document.getElementById("map"), {
-                zoom: 15,
-                center: { lat: 10.1300, lng: 124.8400 },
-                mapTypeControl: false,
-                streetViewControl: false
-            });
-            if (targetOrder) { listenForActiveRider(); } 
-            else { document.getElementById('status-text').innerText = "Error: Invalid Tracking URL."; }
-        }
-
-        function listenForActiveRider() {
-            database.ref('active_riders').on('value', (snapshot) => {
-                let riderFound = false;
-                snapshot.forEach((childSnapshot) => {
-                    const data = childSnapshot.val();
-                    if (data.orderId === targetOrder) {
-                        riderFound = true;
-                        document.getElementById('status-text').innerText = "Rider Status: " + data.status;
-                        const position = { lat: data.lat, lng: data.lng };
-                        if (riderMarker) { riderMarker.setPosition(position); } 
-                        else {
-                            riderMarker = new google.maps.Marker({
-                                position: position,
-                                map: map,
-                                icon: "http://maps.google.com/mapfiles/ms/icons/red-dot.png"
-                            });
-                        }
-                        map.panTo(position);
-                    }
-                });
-                if (!riderFound) { document.getElementById('status-text').innerText = "Rider is offline or preparing."; }
-            });
-        }
-
-        window.addEventListener('load', initMap);
-    </script>
-<script src="https://maps.googleapis.com/maps/api/js?key=AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ&libraries=maps&callback=initMap" async defer></script>
 </body>
 </html>
