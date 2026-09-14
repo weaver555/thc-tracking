@@ -3,9 +3,11 @@
 <head>
     <title>Rider Secure Console</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <!-- 1. Add correct Firebase v8 SDK scripts in your <head> -->
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
     <script src="https://gstatic.com"></script>
+
     <style>
         body { font-family: 'Segoe UI', sans-serif; text-align: center; padding: 20px; background: #f4f6f9; color: #333; }
         .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); max-width: 380px; margin: 40px auto; }
@@ -34,18 +36,36 @@
         <div id="status">Status: Ready to connect...</div>
     </div>
     <script>
-        const firebaseConfig = {
-            apiKey: "AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",
-            authDomain: "thc-rider-tracker.firebaseapp.com",
-            databaseURL: "https://firebasedatabase.app",
-            projectId: "thc-rider-tracker",
-            storageBucket: "://appspot.com",
-            messagingSenderId: "1020694020459",
-            appId: "1:1020694020459:web:3abf81418fec72af168c2e"
-        };
+               const firebaseConfig = {
+    apiKey: "AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",
+    authDomain: "thc-rider-tracker.firebaseapp.com",
+    databaseURL: "https://thc-rider-tracker-default-rtdb.asia-southeast1.firebasedatabase.app", 
+    projectId: "thc-rider-tracker",
+    storageBucket: "thc-rider-tracker.appspot.com",
+    messagingSenderId: "1020694020459",
+    appId: "1:1020694020459:web:3abf81418fec72af168c2e"
+};
+
+
         
-        try { firebase.initializeApp(firebaseConfig); document.getElementById('status').innerText = "System Diagnostic: Connected."; } 
-        catch (err) { document.getElementById('status').classList.add('error-msg'); document.getElementById('status').innerText = "Setup Error: " + err.message; }
+        // Helper function to reset status styles smoothly
+        function updateStatus(text, isError = false) {
+            const statusDiv = document.getElementById('status');
+            statusDiv.innerText = text;
+            if (isError) {
+                statusDiv.classList.add('error-msg');
+            } else {
+                statusDiv.classList.remove('error-msg');
+            }
+        }
+        
+        try { 
+            firebase.initializeApp(firebaseConfig); 
+            updateStatus("System Diagnostic: Connected."); 
+        } 
+        catch (err) { 
+            updateStatus("Setup Error: " + err.message, true); 
+        }
 
         const auth = firebase.auth();
         const database = firebase.database();
@@ -58,11 +78,11 @@
                 document.getElementById('login-section').classList.add('hidden');
                 document.getElementById('tracking-section').classList.remove('hidden');
                 document.getElementById('rider-email-display').innerText = user.email;
-                document.getElementById('status').innerText = "Active Shift Session Loaded.";
+                updateStatus("Active Shift Session Loaded.");
             } else {
                 document.getElementById('login-section').classList.remove('hidden');
                 document.getElementById('tracking-section').classList.add('hidden');
-                document.getElementById('status').innerText = "Logged out. Ready.";
+                updateStatus("Logged out. Ready.");
             }
         });
 
@@ -70,21 +90,23 @@
             const email = document.getElementById('riderEmailInput').value.trim();
             const password = document.getElementById('riderPasswordInput').value;
             if(!email || !password) { alert("Please type email and password."); return; }
-            document.getElementById('status').innerText = "Authenticating...";
+            updateStatus("Authenticating...");
             auth.signInWithEmailAndPassword(email, password).catch(err => {
-                document.getElementById('status').classList.add('error-msg');
-                document.getElementById('status').innerText = "Error: Login Denied.";
+                updateStatus("Error: Login Denied.", true);
                 alert("Firebase Rejection: " + err.message);
             });
         }
 
-        function logoutRider() { if (watchId) navigator.geolocation.clearWatch(watchId); auth.signOut(); }
+        function logoutRider() { 
+            if (watchId) navigator.geolocation.clearWatch(watchId); 
+            auth.signOut(); 
+        }
 
         function startTracking() {
             const orderId = document.getElementById('orderId').value.trim();
             if (!orderId) { alert('Please enter a Loyverse Order ID.'); return; }
             if (navigator.geolocation) {
-                document.getElementById('status').innerText = "Verifying GPS...";
+                updateStatus("Verifying GPS...");
                 watchId = navigator.geolocation.watchPosition((position) => {
                     database.ref('active_riders/' + currentRiderId).set({
                         lat: position.coords.latitude,
@@ -92,8 +114,12 @@
                         orderId: orderId,
                         status: "Out for Delivery",
                         updatedAt: Date.now()
-                    }).then(() => { document.getElementById('status').innerText = `Tracking active for Order #${orderId}!`; });
-                }, (error) => { alert("Please turn on phone location services."); }, { enableHighAccuracy: true, maximumAge: 0 });
+                    }).then(() => { 
+                        updateStatus(`Tracking active for Order #${orderId}!`); 
+                    });
+                }, (error) => { 
+                    alert("Please turn on phone location services."); 
+                }, { enableHighAccuracy: true, maximumAge: 0 });
             }
         }
     </script>
