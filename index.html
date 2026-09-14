@@ -3,8 +3,11 @@
 <head>
     <title>Live Delivery Tracker</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <script src="https://gstatic.com"></script>
-    <script src="https://gstatic.com"></script>
+ <!-- Make sure these script tags are in the <head> of index.html -->
+<script src="https://gstatic.com"></script>
+<script src="https://gstatic.com"></script>
+<script src="https://gstatic.com"></script>
+
     <style>
         body { font-family: 'Segoe UI', Tahoma, sans-serif; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; background: #e5e5e5; }
         #map { flex-grow: 1; width: 100%; height: 100%; }
@@ -27,14 +30,15 @@
     </div>
     <script>
         const firebaseConfig = {
-            apiKey: "AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",
-            authDomain: "thc-rider-tracker.firebaseapp.com",
-            databaseURL: "https://firebasedatabase.app",
-            projectId: "thc-rider-tracker",
-            storageBucket: "://appspot.com",
-            messagingSenderId: "1020694020459",
-            appId: "1:1020694020459:web:3abf81418fec72af168c2e"
-        };
+    apiKey: "AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",
+    authDomain: "://firebaseapp.com",
+    databaseURL: "https://firebasedatabase.app", 
+    projectId: "thc-rider-tracker",
+    storageBucket: "://appspot.com",
+    messagingSenderId: "1020694020459",
+    appId: "1:1020694020459:web:3abf81418fec72af168c2e"
+};
+
         firebase.initializeApp(firebaseConfig);
         const database = firebase.database();
 
