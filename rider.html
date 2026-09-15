@@ -731,7 +731,7 @@ async function logout(){
 function listenForCustomers(){
 
     const ref =
-        db.ref("customer_rooms");
+        db.ref("active_customers");
 
 
     if(customersListener){
@@ -766,26 +766,16 @@ function listenForCustomers(){
                         }
 
 
-                        /*
-                         * Only show active deliveries.
-                         *
-                         * WAITING:
-                         * Customer needs a rider.
-                         *
-                         * ACCEPTED:
-                         * Rider has picked customer.
-                         *
-                         * ON_THE_WAY:
-                         * Delivery is in progress.
-                         *
-                         * DELIVERED:
-                         * No longer active.
-                         */
-
                         if(
                             room.status === "WAITING" ||
-                            room.status === "ACCEPTED" ||
-                            room.status === "ON_THE_WAY"
+                            (
+                                room.status === "ACCEPTED" &&
+                                room.riderId === riderUid
+                            ) ||
+                            (
+                                room.status === "ON_THE_WAY" &&
+                                room.riderId === riderUid
+                            )
                         ){
 
                             rooms.push({
@@ -992,54 +982,54 @@ async function pickCustomer(roomKey){
     try{
 
         /*
-         * Transaction prevents two riders from
-         * picking the same waiting customer at
-         * exactly the same time.
+         * Claim the customer from the active list.
+         * The transaction prevents two riders from
+         * picking the same customer at the same time.
          */
 
-        const roomRef =
+        const activeRef =
             db.ref(
-                "customer_rooms/" +
+                "active_customers/" +
                 roomKey
             );
 
 
         const result =
-            await roomRef.transaction(
-                room => {
+            await activeRef.transaction(
+                customer => {
 
-                    if(!room){
-
-                        return;
-
-                    }
-
-
-                    if(room.status !== "WAITING"){
+                    if(!customer){
 
                         return;
 
                     }
 
 
-                    if(room.riderId){
+                    if(customer.status !== "WAITING"){
 
                         return;
 
                     }
 
 
-                    room.status =
+                    if(customer.riderId){
+
+                        return;
+
+                    }
+
+
+                    customer.status =
                         "ACCEPTED";
 
-                    room.riderId =
+                    customer.riderId =
                         riderUid;
 
-                    room.acceptedAt =
+                    customer.acceptedAt =
                         firebase.database.ServerValue.TIMESTAMP;
 
 
-                    return room;
+                    return customer;
 
                 }
             );
@@ -1056,6 +1046,25 @@ async function pickCustomer(roomKey){
         }
 
 
+        /*
+         * Update the private customer room.
+         */
+
+        await db.ref(
+            "customer_rooms/" +
+            roomKey
+        ).update({
+
+            status:"ACCEPTED",
+
+            riderId:riderUid,
+
+            acceptedAt:
+                firebase.database.ServerValue.TIMESTAMP
+
+        });
+
+
         selectedRoomKey =
             roomKey;
 
@@ -1069,15 +1078,15 @@ async function pickCustomer(roomKey){
 
         console.error(error);
 
-        alert(
+        showActionNote(
             "Unable to pick customer: " +
-            error.message
+            error.message,
+            true
         );
 
     }
 
-}
-
+}    
 
 /* =========================================================
    OPEN SELECTED CUSTOMER
@@ -1419,6 +1428,27 @@ async function markOnTheWay(){
 
     try{
 
+        /*
+         * Update the active customer list.
+         */
+
+        await db.ref(
+            "active_customers/" +
+            selectedRoomKey
+        ).update({
+
+            status:"ON_THE_WAY",
+
+            onTheWayAt:
+                firebase.database.ServerValue.TIMESTAMP
+
+        });
+
+
+        /*
+         * Update the private customer room.
+         */
+
         await db.ref(
             "customer_rooms/" +
             selectedRoomKey
@@ -1482,6 +1512,14 @@ async function markDelivered(){
         stopRiderLocation();
 
 
+        /*
+         * Update the private customer room.
+         *
+         * We DO NOT delete the room because
+         * the customer needs to see
+         * "Delivery Complete".
+         */
+
         await db.ref(
             "customer_rooms/" +
             selectedRoomKey
@@ -1496,12 +1534,14 @@ async function markDelivered(){
 
 
         /*
-         * IMPORTANT:
-         * We intentionally DO NOT delete the room.
-         *
-         * The customer needs to see
-         * "Delivery Complete".
+         * Remove the customer from the
+         * rider's active customer list.
          */
+
+        await db.ref(
+            "active_customers/" +
+            selectedRoomKey
+        ).remove();
 
 
         showActionNote(
@@ -1533,8 +1573,7 @@ async function markDelivered(){
     }
 
 }
-
-
+    
 /* =========================================================
    BACK TO CUSTOMER LIST
 ========================================================= */
@@ -1890,8 +1929,8 @@ function removeListeners(){
     if(customersListener){
 
         db.ref(
-            "customer_rooms"
-        ).off(
+    "active_customers"
+).off(
             "value",
             customersListener
         );
