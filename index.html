@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html>
 <head>
-    <title>THC Delivery - Order & Track</title>
+    <title>THC Delivery - Track Your Order</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -12,12 +12,10 @@
         .subtitle { color: #666; margin-bottom: 40px; font-size: 16px; }
         .button-group { display: flex; flex-direction: column; gap: 15px; }
         .btn { padding: 16px; border: none; border-radius: 10px; font-size: 16px; font-weight: bold; cursor: pointer; text-decoration: none; display: inline-block; transition: all 0.3s; }
-        .btn-order { background: #28a745; color: white; }
-        .btn-order:hover { background: #218838; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(40,167,69,0.3); }
+        .btn-customer { background: #28a745; color: white; }
+        .btn-customer:hover { background: #218838; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(40,167,69,0.3); }
         .btn-rider { background: #0084ff; color: white; }
         .btn-rider:hover { background: #0073e6; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(0,132,255,0.3); }
-        .btn-track { background: #ffc107; color: #333; }
-        .btn-track:hover { background: #ffb300; transform: translateY(-2px); box-shadow: 0 5px 20px rgba(255,193,7,0.3); }
         .info-box { background: #f0f8ff; border-left: 4px solid #0084ff; padding: 15px; margin-top: 30px; text-align: left; border-radius: 8px; font-size: 14px; color: #333; line-height: 1.6; }
         .info-box strong { color: #0084ff; }
     </style>
@@ -26,17 +24,16 @@
     <div class="container">
         <div class="logo">🍕📍</div>
         <h1>THC Delivery</h1>
-        <p class="subtitle">Fast food. Real-time tracking.</p>
+        <p class="subtitle">Real-time order tracking</p>
         
         <div class="button-group">
-            <a href="order.html" class="btn btn-order">📝 Place New Order</a>
-            <a href="rider.html" class="btn btn-rider">🚴‍♂️ Rider Console</a>
-            <a href="track.html" class="btn btn-track">📍 Track My Order</a>
+            <a href="customer.html" class="btn btn-customer">👩‍💼 I'm a Customer - Track Order</a>
+            <a href="rider.html" class="btn btn-rider">🚴‍♂️ I'm a Rider - Deliver Orders</a>
         </div>
 
         <div class="info-box">
-            <strong>👉 Customers:</strong> Place order & track delivery in real-time<br>
-            <strong>👉 Riders:</strong> Accept orders & deliver with live GPS tracking
+            <strong>📋 Customers:</strong> Enter your name to track delivery status<br>
+            <strong>🚴 Riders:</strong> Enter Order ID + Customer Name to start delivery
         </div>
     </div>
 </body>

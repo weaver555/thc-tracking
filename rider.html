@@ -12,19 +12,24 @@
         .container { max-width: 600px; margin: 0 auto; }
         .card { background: white; padding: 30px; border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 20px; }
         h2 { color: #1a73e8; margin-bottom: 20px; }
-        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #dadce0; border-radius: 6px; font-size: 16px; }
-        button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        h3 { color: #333; margin-top: 20px; margin-bottom: 15px; }
+        input, select { width: 100%; padding: 12px; margin: 10px 0; border: 1px solid #dadce0; border-radius: 6px; font-size: 16px; font-family: 'Segoe UI', sans-serif; }
+        input:focus, select:focus { outline: none; border: 2px solid #1a73e8; }
+        button { width: 100%; padding: 12px; margin: 10px 0; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 16px; transition: all 0.3s; }
         .btn-primary { background: #1a73e8; color: white; }
+        .btn-primary:hover { background: #0f66d2; }
         .btn-success { background: #28a745; color: white; }
+        .btn-success:hover { background: #218838; }
         .btn-danger { background: #dc3545; color: white; }
-        #status { padding: 10px; border-radius: 6px; margin-top: 15px; font-weight: bold; }
-        .success { background: #d4edda; color: #155724; }
-        .error { background: #f8d7da; color: #721c24; }
-        .info { background: #d1ecf1; color: #0c5460; }
-        .hidden { display: none; }
+        .btn-danger:hover { background: #c82333; }
+        #status { padding: 10px; border-radius: 6px; margin-top: 15px; font-weight: bold; display: none; }
+        .success { background: #d4edda; color: #155724; display: block; }
+        .error { background: #f8d7da; color: #721c24; display: block; }
+        .info { background: #d1ecf1; color: #0c5460; display: block; }
+        .hidden { display: none !important; }
         .back-btn { background: #6c757d; color: white; padding: 12px 20px; border: none; border-radius: 8px; cursor: pointer; margin-bottom: 20px; font-weight: bold; }
-        .order-list { max-height: 400px; overflow-y: auto; }
         .order-item { background: #f9f9f9; padding: 15px; margin-bottom: 10px; border-radius: 8px; border-left: 4px solid #1a73e8; }
+        .order-item strong { color: #1a73e8; }
     </style>
 </head>
 <body>
@@ -42,19 +47,16 @@
         <div class="card hidden" id="riderDashboard">
             <h2>Welcome, <span id="riderName"></span>! 🎉</h2>
             
-            <h3>📋 Available Orders</h3>
-            <div class="order-list" id="orderList">Loading...</div>
-            
-            <h3 style="margin-top: 20px;">Current Delivery</h3>
-            <select id="currentOrder">
-                <option value="">Select an order to deliver</option>
-            </select>
-            <button class="btn-success" onclick="acceptOrder()">✓ Accept Order</button>
+            <h3>📋 Confirm Order for Delivery</h3>
+            <input type="text" id="orderId" placeholder="Enter Order ID (e.g., #3-1420)">
+            <input type="text" id="confirmName" placeholder="Customer Name (to confirm)">
+            <button class="btn-success" onclick="confirmOrder()" id="confirmBtn">✓ Confirm & Start Delivery</button>
             
             <div id="deliverySection" class="hidden" style="margin-top: 20px; padding-top: 20px; border-top: 2px solid #ddd;">
                 <h3>🚴 Active Delivery</h3>
-                <div id="orderDetails"></div>
-                <button class="btn-success" onclick="startTracking()" id="startBtn">🚴 Start Delivery & Track</button>
+                <div id="orderDetails" style="background: #f9f9f9; padding: 15px; border-radius: 8px; margin-bottom: 15px;"></div>
+                
+                <button class="btn-success" onclick="startTracking()" id="startBtn">🚴 Start Delivery & Track with GPS</button>
                 <button class="btn-danger" onclick="completeDelivery()" id="completeBtn" class="hidden">✅ Mark as Delivered</button>
                 <button class="btn-danger" onclick="riderLogout()" style="margin-top: 20px;">Sign Out</button>
             </div>
@@ -104,83 +106,65 @@
                 document.getElementById('loginSection').classList.add('hidden');
                 document.getElementById('riderDashboard').classList.remove('hidden');
                 document.getElementById('riderName').innerText = email.split('@')[0];
-                loadAvailableOrders();
+                updateStatus('✓ Signed in successfully', 'success');
             }).catch(err => {
                 updateStatus('❌ Login failed: ' + err.message, 'error');
             });
         }
 
-        function loadAvailableOrders() {
-            database.ref('orders').on('value', (snapshot) => {
-                let pendingOrders = [];
-                let html = '';
-                let selectHtml = '<option value="">Select an order</option>';
-                
-                snapshot.forEach((child) => {
-                    const order = child.val();
-                    if (order.status === 'PENDING' || order.status === 'ACCEPTED') {
-                        pendingOrders.push(order);
-                        html += `<div class="order-item">
-                            <strong>${order.orderId}</strong><br>
-                            👤 ${order.customerName} | ☎️ ${order.customerPhone}<br>
-                            📍 ${order.landmark}<br>
-                            🍕 ${order.items.substring(0, 50)}...<br>
-                            💰 ₱${order.amount}<br>
-                            Status: <strong>${order.status}</strong>
-                        </div>`;
-                        selectHtml += `<option value="${order.orderId}">${order.orderId} - ${order.customerName}</option>`;
-                    }
-                });
-                
-                document.getElementById('orderList').innerHTML = html || 'No pending orders';
-                document.getElementById('currentOrder').innerHTML = selectHtml;
-            });
-        }
-
-        function acceptOrder() {
-            const orderId = document.getElementById('currentOrder').value;
-            if (!orderId) {
-                updateStatus('❌ Select an order', 'error');
+        function confirmOrder() {
+            const orderId = document.getElementById('orderId').value.trim();
+            const confirmName = document.getElementById('confirmName').value.trim().toUpperCase();
+            
+            if (!orderId || !confirmName) {
+                updateStatus('❌ Enter Order ID and Customer Name', 'error');
                 return;
             }
 
-            activeOrderId = orderId;
-            database.ref('orders/' + orderId).update({ status: 'ACCEPTED' }).then(() => {
-                updateStatus('✓ Order accepted! Now start delivery.', 'success');
-                loadOrderDetails();
-            }).catch(err => {
-                updateStatus('❌ Error: ' + err.message, 'error');
-            });
-        }
-
-        function loadOrderDetails() {
-            database.ref('orders/' + activeOrderId).once('value', (snapshot) => {
-                const order = snapshot.val();
-                document.getElementById('deliverySection').classList.remove('hidden');
-                document.getElementById('orderDetails').innerHTML = `
-                    <strong>Order ID:</strong> ${order.orderId}<br>
-                    <strong>Customer:</strong> ${order.customerName}<br>
-                    <strong>Phone:</strong> ${order.customerPhone}<br>
-                    <strong>Address:</strong> ${order.landmark}<br>
-                    <strong>Items:</strong> ${order.items}<br>
-                    <strong>Amount:</strong> ₱${order.amount}<br>
-                    <strong>Location:</strong> Lat: ${order.latitude}, Lng: ${order.longitude}
-                `;
+            // Search for order
+            database.ref('orders').once('value', (snapshot) => {
+                let found = false;
+                snapshot.forEach((child) => {
+                    const order = child.val();
+                    if (order.orderId === orderId && order.customerName && order.customerName.toUpperCase() === confirmName) {
+                        found = true;
+                        activeOrderId = orderId;
+                        
+                        // Update order status to ON_THE_WAY immediately
+                        database.ref('orders/' + orderId).update({ status: 'ON_THE_WAY' });
+                        
+                        // Show delivery section
+                        document.getElementById('deliverySection').classList.remove('hidden');
+                        document.getElementById('orderDetails').innerHTML = `
+                            <strong>Order ID:</strong> ${order.orderId}<br>
+                            <strong>Customer:</strong> ${order.customerName}<br>
+                            <strong>Items:</strong> ${order.items}<br>
+                            <strong>Amount:</strong> ₱${order.amount}<br>
+                            <strong>Address:</strong> ${order.landmark || 'N/A'}<br>
+                            <strong>Phone:</strong> ${order.customerPhone || 'N/A'}
+                        `;
+                        
+                        updateStatus('✓ Order confirmed! Customer will now see you ON THE WAY on their map', 'success');
+                        document.getElementById('orderId').value = '';
+                        document.getElementById('confirmName').value = '';
+                    }
+                });
+                
+                if (!found) {
+                    updateStatus('❌ Order not found. Check Order ID and Customer Name.', 'error');
+                }
             });
         }
 
         function startTracking() {
             if (!navigator.geolocation) {
-                updateStatus('❌ GPS not available', 'error');
+                updateStatus('❌ GPS not available on your device', 'error');
                 return;
             }
 
-            updateStatus('📍 Starting delivery with GPS tracking...', 'info');
+            updateStatus('📍 Starting GPS tracking...', 'info');
             document.getElementById('startBtn').disabled = true;
             document.getElementById('completeBtn').classList.remove('hidden');
-
-            // Update order status to ON_THE_WAY
-            database.ref('orders/' + activeOrderId).update({ status: 'ON_THE_WAY' });
 
             watchId = navigator.geolocation.watchPosition((position) => {
                 const riderData = {
@@ -193,7 +177,7 @@
                 };
 
                 database.ref('active_riders/' + currentRiderId).set(riderData);
-                updateStatus(`📍 Live tracking active: ${position.coords.latitude.toFixed(4)}, ${position.coords.longitude.toFixed(4)}`, 'success');
+                updateStatus(`📍 GPS Active: Lat ${position.coords.latitude.toFixed(4)}, Lng ${position.coords.longitude.toFixed(4)}`, 'success');
             }, (error) => {
                 updateStatus('❌ GPS Error: ' + error.message, 'error');
             }, { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 });
@@ -205,12 +189,11 @@
             database.ref('orders/' + activeOrderId).update({ status: 'DELIVERED' });
             database.ref('active_riders/' + currentRiderId).remove();
             
-            updateStatus('✅ Order delivered!', 'success');
+            updateStatus('✅ Order marked as DELIVERED!', 'success');
             activeOrderId = null;
             document.getElementById('deliverySection').classList.add('hidden');
             document.getElementById('startBtn').disabled = false;
             document.getElementById('completeBtn').classList.add('hidden');
-            loadAvailableOrders();
         }
 
         function riderLogout() {
@@ -220,7 +203,8 @@
                 document.getElementById('riderDashboard').classList.add('hidden');
                 document.getElementById('riderEmail').value = '';
                 document.getElementById('riderPassword').value = '';
-                updateStatus('');
+                document.getElementById('status').className = '';
+                document.getElementById('status').innerText = '';
             });
         }
     </script>
