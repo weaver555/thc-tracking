@@ -1211,12 +1211,37 @@ async function restoreExistingRoom(){
 
     try{
 
-        const credential =
-            await auth.signInAnonymously();
+        /*
+         * Use the existing Firebase user if one
+         * is already available.
+         *
+         * Otherwise create a new anonymous user.
+         */
+
+        let user =
+            auth.currentUser;
+
+
+        if(!user){
+
+            const credential =
+                await auth.signInAnonymously();
+
+            user =
+                credential.user;
+
+        }
+
+
+        if(!user || user.isAnonymous !== true){
+
+            return;
+
+        }
 
 
         customerUid =
-            credential.user.uid;
+            user.uid;
 
 
         const snapshot =
@@ -1232,7 +1257,7 @@ async function restoreExistingRoom(){
 
         /*
          * Only restore if the room belongs to
-         * the current anonymous Firebase user.
+         * this anonymous Firebase user.
          */
 
         if(
@@ -1247,7 +1272,9 @@ async function restoreExistingRoom(){
                 room.customerName;
 
 
-            if(room.status === "DELIVERED"){
+            if(
+                room.status === "DELIVERED"
+            ){
 
                 showDeliveryComplete();
 
@@ -1262,13 +1289,13 @@ async function restoreExistingRoom(){
     }catch(error){
 
         console.log(
-            "No existing customer room restored."
+            "No existing customer room restored.",
+            error
         );
 
     }
 
 }
-
 
 /* =========================================================
    STARTUP
