@@ -1197,84 +1197,49 @@ function showDeliveryComplete(){
 async function restoreExistingRoom(){
 
     const savedRoom =
-        localStorage.getItem(
-            "thc_customer_room"
-        );
-
+        localStorage.getItem("thc_customer_room");
 
     if(!savedRoom){
-
         return;
-
     }
-
 
     try{
 
-        /*
-         * Use the existing Firebase user if one
-         * is already available.
-         *
-         * Otherwise create a new anonymous user.
-         */
+        const user = await new Promise(resolve => {
 
-        let user =
-            auth.currentUser;
+            const unsubscribe =
+                auth.onAuthStateChanged(currentUser => {
 
+                    unsubscribe();
+                    resolve(currentUser);
 
-        if(!user){
+                });
 
-            const credential =
-                await auth.signInAnonymously();
+        });
 
-            user =
-                credential.user;
-
-        }
-
-
-        if(!user || user.isAnonymous !== true){
-
+        if(!user || !user.isAnonymous){
+            console.log("No anonymous customer session available.");
             return;
-
         }
 
-
-        customerUid =
-            user.uid;
-
+        customerUid = user.uid;
 
         const snapshot =
             await db.ref(
-                "customer_rooms/" +
-                savedRoom
+                "customer_rooms/" + savedRoom
             ).once("value");
 
-
-        const room =
-            snapshot.val();
-
-
-        /*
-         * Only restore if the room belongs to
-         * this anonymous Firebase user.
-         */
+        const room = snapshot.val();
 
         if(
             room &&
             room.customerUid === customerUid
         ){
 
-            roomKey =
-                savedRoom;
+            roomKey = savedRoom;
+            customerName = room.customerName;
 
-            customerName =
-                room.customerName;
-
-
-            if(
-                room.status === "DELIVERED"
-            ){
+            if(room.status === "DELIVERED"){
 
                 showDeliveryComplete();
 
@@ -1284,19 +1249,24 @@ async function restoreExistingRoom(){
 
             }
 
+        }else{
+
+            console.log(
+                "Saved room does not belong to this customer."
+            );
+
         }
 
     }catch(error){
 
-        console.log(
-            "No existing customer room restored.",
+        console.error(
+            "Unable to restore customer room.",
             error
         );
 
     }
 
 }
-
 /* =========================================================
    STARTUP
 ========================================================= */
