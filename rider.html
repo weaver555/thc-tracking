@@ -1,1 +1,2009 @@
-<!doctype html><html><head><meta name="viewport" content="width=device-width,initial-scale=1"><title>MAASIN'S OG BURGER PROJECT</title><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script><script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script><style>body{margin:0;background:#f5f5f2;color:#20231f;font:16px Arial}.wrap{max-width:680px;margin:auto;padding:28px 18px}.card{background:#fff;border:1px solid #e1e4dd;border-radius:14px;padding:20px;margin:14px 0}h1{font-size:25px;margin:0 0 8px}h2{font-size:18px}input,button{font:inherit;padding:12px;border-radius:9px;box-sizing:border-box}input{width:100%;border:1px solid #bfc5bb;margin:7px 0}button{background:#253c28;color:#fff;border:0;font-weight:700;cursor:pointer}.danger{background:#8b3030}.hidden{display:none}.note{padding:10px;background:#f3f5ee;border-radius:9px}.error{background:#fdeced;color:#8a2428}.messages{height:230px;overflow:auto;border:1px solid #e1e4dd;border-radius:9px;padding:10px}.msg{background:#edf2e8;padding:8px;margin:6px 0;border-radius:8px}.mine{margin-left:auto;background:#dcebd8}.row{display:flex;gap:8px}.row input{margin:0}.sub{color:#62685f;font-size:14px}</style></head><body><main class="wrap"><h1>MAASIN'S OG BURGER PROJECT</h1><p class="sub">Rider delivery console</p><section id="login" class="card"><h2>Rider sign in</h2><input id="email" type="email" placeholder="Email"><input id="pass" type="password" placeholder="Password"><button onclick="login()">Sign in</button><p id="logNote" class="note hidden"></p></section><section id="dash" class="hidden"><div class="card"><h2>Confirm order</h2><input id="oid" placeholder="Order number"><input id="cname" placeholder="Customer full name with surname"><button onclick="confirmOrder()">Confirm and start delivery</button><p id="note" class="note hidden"></p></div><section id="active" class="hidden"><div class="card"><h2 id="title">Active delivery</h2><p id="customerLoc" class="sub">Customer location not shared yet.</p><button onclick="startGps()">Start rider location sharing</button><button class="danger" onclick="complete()">Mark delivered and end chat</button></div><div class="card"><h2>Customer messages</h2><div id="messages" class="messages"></div><div class="row" style="margin-top:10px"><input id="text" placeholder="Write a message"><button onclick="send()">Send</button></div></div></section></section></main><script>const cfg={apiKey:"AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",authDomain:"thc-rider-tracker.firebaseapp.com",databaseURL:"https://thc-rider-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",projectId:"thc-rider-tracker",storageBucket:"thc-rider-tracker.appspot.com",messagingSenderId:"1020694020459",appId:"1:1020694020459:web:3abf81418fec72af168c2e"};firebase.initializeApp(cfg);const auth=firebase.auth(),db=firebase.database();let rider,key,watch;function say(t,b=false){let e=document.getElementById('note');e.textContent=t;e.className='note '+(b?'error':'');e.classList.remove('hidden')}function login(){auth.signInWithEmailAndPassword(email.value.trim(),pass.value).then(u=>{rider=u.user.uid;document.getElementById('login').classList.add('hidden');document.getElementById('dash').classList.remove('hidden')}).catch(e=>{logNote.textContent=e.message;logNote.classList.remove('hidden')})}function confirmOrder(){let id=oid.value.trim(),n=cname.value.trim().toUpperCase();if(!id||!n)return say('Enter the order number and full customer name.',true);db.ref('orders').once('value').then(s=>{let f; s.forEach(c=>{let o=c.val();if(!f&&o.orderId===id&&o.customerName&&o.customerName.trim().toUpperCase()===n)f={key:c.key,o}});if(!f)throw Error('No exact order-slip match found.');key=f.key;return db.ref('orders/'+key).update({status:'ON_THE_WAY',riderId:rider,confirmedAt:Date.now()}).then(()=>db.ref('delivery_rooms/'+key).update({orderKey:key,orderId:id,customerName:f.o.customerName,status:'ON_THE_WAY',riderId:rider,confirmedAt:Date.now()}))}).then(()=>{active.classList.remove('hidden');title.textContent='Active delivery: '+id;listen();say('Order confirmed. The customer can now join the delivery room.')}).catch(e=>say(e.message,true))}function listen(){db.ref('delivery_rooms/'+key).on('value',s=>{let r=s.val();if(!r)return;if(r.customerLocation)customerLoc.textContent='Customer location: '+r.customerLocation.lat.toFixed(5)+', '+r.customerLocation.lng.toFixed(5);let ms=r.messages||{};messages.innerHTML=Object.values(ms).sort((a,b)=>a.at-b.at).map(m=>'<div class="msg '+(m.from==='rider'?'mine':'')+'"><small>'+ (m.from==='rider'?'You':'Customer')+'</small><br>'+String(m.text).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]))+'</div>').join('');messages.scrollTop=messages.scrollHeight})}function send(){let t=text.value.trim();if(t&&key){db.ref('delivery_rooms/'+key+'/messages').push({from:'rider',text:t,at:Date.now()});text.value=''}}function startGps(){if(!navigator.geolocation)return say('GPS is unavailable.',true);if(watch)navigator.geolocation.clearWatch(watch);watch=navigator.geolocation.watchPosition(p=>db.ref('delivery_rooms/'+key+'/riderLocation').set({lat:p.coords.latitude,lng:p.coords.longitude,at:Date.now()}),e=>say(e.message,true),{enableHighAccuracy:true,timeout:10000})}function complete(){if(!key)return;if(watch)navigator.geolocation.clearWatch(watch);db.ref('orders/'+key).update({status:'DELIVERED',deliveredAt:Date.now()}).then(()=>db.ref('delivery_rooms/'+key).remove()).then(()=>{active.classList.add('hidden');say('Delivered. The customer room and messages have been removed.');key=null}).catch(e=>say(e.message,true))}</script></body></html>
+<!doctype html>
+<html lang="en">
+
+<head>
+
+<meta charset="utf-8">
+
+<meta
+    name="viewport"
+    content="width=device-width,initial-scale=1"
+>
+
+<title>THC Delivery - Rider</title>
+
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-app.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-auth.js"></script>
+<script src="https://www.gstatic.com/firebasejs/8.10.1/firebase-database.js"></script>
+
+<style>
+
+*{
+    box-sizing:border-box;
+}
+
+body{
+    margin:0;
+    background:#f5f5f2;
+    color:#20231f;
+    font:16px Arial,sans-serif;
+}
+
+.wrap{
+    max-width:760px;
+    margin:auto;
+    padding:28px 18px;
+}
+
+header{
+    margin-bottom:24px;
+}
+
+h1{
+    font-size:25px;
+    margin:0 0 7px;
+}
+
+h2{
+    font-size:18px;
+    margin:0 0 12px;
+}
+
+h3{
+    margin:0 0 6px;
+    font-size:17px;
+}
+
+.sub{
+    color:#62685f;
+    font-size:14px;
+}
+
+.card{
+    background:#fff;
+    border:1px solid #e1e4dd;
+    border-radius:14px;
+    padding:20px;
+    margin:14px 0;
+    box-shadow:0 3px 12px #0000000a;
+}
+
+input,
+button{
+    font:inherit;
+    padding:12px;
+    border-radius:9px;
+}
+
+input{
+    width:100%;
+    border:1px solid #bfc5bb;
+    margin:7px 0;
+}
+
+button{
+    background:#253c28;
+    color:#fff;
+    border:0;
+    font-weight:700;
+    cursor:pointer;
+}
+
+button:disabled{
+    opacity:.5;
+    cursor:not-allowed;
+}
+
+.hidden{
+    display:none!important;
+}
+
+.note{
+    padding:11px;
+    background:#f3f5ee;
+    border-radius:9px;
+    margin-top:10px;
+}
+
+.error{
+    background:#fdeced;
+    color:#8a2428;
+}
+
+.customer-list{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
+
+.customer-card{
+    border:1px solid #e1e4dd;
+    border-radius:12px;
+    padding:15px;
+    background:#fafbf8;
+}
+
+.customer-card-top{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+}
+
+.customer-name{
+    font-weight:700;
+    font-size:17px;
+}
+
+.customer-status{
+    font-size:13px;
+    color:#62685f;
+    margin-top:5px;
+}
+
+.pick-button{
+    margin-top:12px;
+    width:100%;
+}
+
+.status{
+    padding:12px;
+    border-radius:9px;
+    background:#f3f5ee;
+    font-weight:700;
+    margin-bottom:14px;
+}
+
+.location-box{
+    padding:13px;
+    border-radius:9px;
+    background:#f3f5ee;
+    font-size:14px;
+    margin-bottom:10px;
+}
+
+.map-link{
+    display:inline-block;
+    margin-top:8px;
+    color:#1769aa;
+    font-weight:700;
+    text-decoration:none;
+}
+
+.action-row{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+}
+
+.action-row button{
+    flex:1;
+    min-width:140px;
+}
+
+.on-way{
+    background:#245f9e;
+}
+
+.delivered{
+    background:#237a3b;
+}
+
+.back{
+    background:#62685f;
+}
+
+.messages{
+    height:280px;
+    overflow:auto;
+    border:1px solid #e1e4dd;
+    border-radius:10px;
+    padding:10px;
+    background:#fafbf8;
+}
+
+.msg{
+    padding:9px 11px;
+    margin:7px 0;
+    border-radius:10px;
+    background:#edf2e8;
+    max-width:84%;
+    word-wrap:break-word;
+}
+
+.mine{
+    margin-left:auto;
+    background:#dcebd8;
+}
+
+.meta{
+    font-size:12px;
+    color:#687066;
+    margin-bottom:3px;
+}
+
+.row{
+    display:flex;
+    gap:8px;
+    margin-top:10px;
+}
+
+.row input{
+    margin:0;
+    flex:1;
+}
+
+.row button{
+    white-space:nowrap;
+}
+
+.empty{
+    text-align:center;
+    padding:20px;
+    color:#62685f;
+}
+
+.header-row{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:10px;
+}
+
+.logout{
+    background:#62685f;
+    padding:9px 12px;
+    font-size:14px;
+}
+
+</style>
+
+</head>
+
+
+<body>
+
+<main class="wrap">
+
+
+<header>
+
+    <div class="header-row">
+
+        <div>
+            <h1>MAASIN'S OG BURGER PROJECT</h1>
+            <div class="sub">
+                Rider Delivery Console
+            </div>
+        </div>
+
+        <button
+            id="logoutButton"
+            class="logout hidden"
+            onclick="logout()"
+        >
+            Sign Out
+        </button>
+
+    </div>
+
+</header>
+
+
+<!-- =====================================================
+     LOGIN
+====================================================== -->
+
+<section
+    id="loginCard"
+    class="card"
+>
+
+    <h2>Rider Sign In</h2>
+
+    <p class="sub">
+        Sign in to view active customers.
+    </p>
+
+    <input
+        id="email"
+        type="email"
+        autocomplete="email"
+        placeholder="Email"
+    >
+
+    <input
+        id="password"
+        type="password"
+        autocomplete="current-password"
+        placeholder="Password"
+    >
+
+    <button
+        id="loginButton"
+        onclick="login()"
+    >
+        Sign In
+    </button>
+
+    <div
+        id="loginNote"
+        class="note hidden"
+    ></div>
+
+</section>
+
+
+<!-- =====================================================
+     RIDER DASHBOARD
+====================================================== -->
+
+<section
+    id="dashboard"
+    class="hidden"
+>
+
+
+<!-- ACTIVE CUSTOMERS -->
+
+<div class="card">
+
+    <h2>Active Customers</h2>
+
+    <p class="sub">
+        Customers who have opened a delivery room will
+        appear here automatically.
+    </p>
+
+    <div
+        id="customerList"
+        class="customer-list"
+    >
+
+        <div class="empty">
+            Waiting for customers...
+        </div>
+
+    </div>
+
+</div>
+
+
+<!-- SELECTED CUSTOMER -->
+
+<section
+    id="activeDelivery"
+    class="hidden"
+>
+
+    <div class="card">
+
+        <h2 id="selectedCustomerName">
+            Customer
+        </h2>
+
+        <div
+            id="deliveryStatus"
+            class="status"
+        >
+            Rider accepted you
+        </div>
+
+
+        <div
+            id="customerLocation"
+            class="location-box"
+        >
+            Customer location has not been shared.
+        </div>
+
+
+        <div class="action-row">
+
+            <button
+                id="onWayButton"
+                class="on-way"
+                onclick="markOnTheWay()"
+            >
+                On The Way
+            </button>
+
+            <button
+                id="deliveredButton"
+                class="delivered"
+                onclick="markDelivered()"
+            >
+                Delivered
+            </button>
+
+            <button
+                class="back"
+                onclick="backToCustomers()"
+            >
+                Back to Customers
+            </button>
+
+        </div>
+
+        <div
+            id="actionNote"
+            class="note hidden"
+        ></div>
+
+    </div>
+
+
+    <!-- CHAT -->
+
+    <div class="card">
+
+        <h2>Chat with Customer</h2>
+
+        <div
+            id="messages"
+            class="messages"
+        ></div>
+
+        <div class="row">
+
+            <input
+                id="messageInput"
+                maxlength="500"
+                placeholder="Write a message..."
+                onkeydown="handleMessageKey(event)"
+            >
+
+            <button onclick="sendMessage()">
+                Send
+            </button>
+
+        </div>
+
+    </div>
+
+</section>
+
+
+</section>
+
+</main>
+
+
+<script>
+
+/* =========================================================
+   FIREBASE CONFIG
+========================================================= */
+
+const firebaseConfig = {
+
+    apiKey:
+        "AIzaSyC57agn1E9fiWBY1Zls4HggsKwKsQAwBoQ",
+
+    authDomain:
+        "thc-rider-tracker.firebaseapp.com",
+
+    databaseURL:
+        "https://thc-rider-tracker-default-rtdb.asia-southeast1.firebasedatabase.app",
+
+    projectId:
+        "thc-rider-tracker",
+
+    storageBucket:
+        "thc-rider-tracker.appspot.com",
+
+    messagingSenderId:
+        "1020694020459",
+
+    appId:
+        "1:1020694020459:web:3abf81418fec72af168c2e"
+
+};
+
+
+firebase.initializeApp(firebaseConfig);
+
+
+const auth =
+    firebase.auth();
+
+const db =
+    firebase.database();
+
+
+/* =========================================================
+   VARIABLES
+========================================================= */
+
+let riderUid = null;
+
+let selectedRoomKey = null;
+
+let customersListener = null;
+
+let selectedRoomListener = null;
+
+let messagesListener = null;
+
+let riderLocationWatchId = null;
+
+
+/* =========================================================
+   HTML ESCAPE
+========================================================= */
+
+function escapeHtml(value){
+
+    return String(value || "")
+        .replace(/&/g,"&amp;")
+        .replace(/</g,"&lt;")
+        .replace(/>/g,"&gt;")
+        .replace(/"/g,"&quot;")
+        .replace(/'/g,"&#039;");
+
+}
+
+
+/* =========================================================
+   LOGIN MESSAGE
+========================================================= */
+
+function showLoginNote(message,isError=false){
+
+    const element =
+        document.getElementById("loginNote");
+
+    element.textContent =
+        message;
+
+    element.className =
+        "note " +
+        (isError ? "error" : "");
+
+    element.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+/* =========================================================
+   ACTION MESSAGE
+========================================================= */
+
+function showActionNote(message,isError=false){
+
+    const element =
+        document.getElementById("actionNote");
+
+    element.textContent =
+        message;
+
+    element.className =
+        "note " +
+        (isError ? "error" : "");
+
+    element.classList.remove(
+        "hidden"
+    );
+
+}
+
+
+/* =========================================================
+   RIDER LOGIN
+========================================================= */
+
+async function login(){
+
+    const email =
+        document
+            .getElementById("email")
+            .value
+            .trim();
+
+    const password =
+        document
+            .getElementById("password")
+            .value;
+
+
+    if(!email){
+
+        showLoginNote(
+            "Please enter your email.",
+            true
+        );
+
+        return;
+    }
+
+
+    if(!password){
+
+        showLoginNote(
+            "Please enter your password.",
+            true
+        );
+
+        return;
+    }
+
+
+    const button =
+        document.getElementById(
+            "loginButton"
+        );
+
+    button.disabled = true;
+
+
+    try{
+
+        const credential =
+            await auth.signInWithEmailAndPassword(
+                email,
+                password
+            );
+
+
+        riderUid =
+            credential.user.uid;
+
+
+        document
+            .getElementById("loginCard")
+            .classList.add("hidden");
+
+
+        document
+            .getElementById("dashboard")
+            .classList.remove("hidden");
+
+
+        document
+            .getElementById("logoutButton")
+            .classList.remove("hidden");
+
+
+        listenForCustomers();
+
+
+    }catch(error){
+
+        console.error(error);
+
+        showLoginNote(
+            error.message,
+            true
+        );
+
+        button.disabled = false;
+
+    }
+
+}
+
+
+/* =========================================================
+   LOGOUT
+========================================================= */
+
+async function logout(){
+
+    stopRiderLocation();
+
+    removeListeners();
+
+    await auth.signOut();
+
+    riderUid = null;
+
+    selectedRoomKey = null;
+
+
+    document
+        .getElementById("dashboard")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("logoutButton")
+        .classList.add("hidden");
+
+
+    document
+        .getElementById("loginCard")
+        .classList.remove("hidden");
+
+
+    document
+        .getElementById("loginButton")
+        .disabled = false;
+
+}
+
+
+/* =========================================================
+   LISTEN FOR ACTIVE CUSTOMERS
+========================================================= */
+
+function listenForCustomers(){
+
+    const ref =
+        db.ref("customer_rooms");
+
+
+    if(customersListener){
+
+        ref.off(
+            "value",
+            customersListener
+        );
+
+    }
+
+
+    customersListener =
+        ref.on(
+            "value",
+            snapshot => {
+
+                const rooms = [];
+
+
+                snapshot.forEach(
+                    child => {
+
+                        const room =
+                            child.val();
+
+
+                        if(!room){
+
+                            return;
+
+                        }
+
+
+                        /*
+                         * Only show active deliveries.
+                         *
+                         * WAITING:
+                         * Customer needs a rider.
+                         *
+                         * ACCEPTED:
+                         * Rider has picked customer.
+                         *
+                         * ON_THE_WAY:
+                         * Delivery is in progress.
+                         *
+                         * DELIVERED:
+                         * No longer active.
+                         */
+
+                        if(
+                            room.status === "WAITING" ||
+                            room.status === "ACCEPTED" ||
+                            room.status === "ON_THE_WAY"
+                        ){
+
+                            rooms.push({
+
+                                key:child.key,
+
+                                room:room
+
+                            });
+
+                        }
+
+                    }
+                );
+
+
+                rooms.sort(
+                    (a,b) =>
+                        Number(
+                            a.room.createdAt || 0
+                        ) -
+                        Number(
+                            b.room.createdAt || 0
+                        )
+                );
+
+
+                renderCustomerList(
+                    rooms
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   RENDER CUSTOMER LIST
+========================================================= */
+
+function renderCustomerList(rooms){
+
+    const container =
+        document.getElementById(
+            "customerList"
+        );
+
+
+    if(!rooms.length){
+
+        container.innerHTML = `
+            <div class="empty">
+                No active customers right now.
+            </div>
+        `;
+
+        return;
+
+    }
+
+
+    container.innerHTML =
+        rooms.map(item => {
+
+            const room =
+                item.room;
+
+            const key =
+                item.key;
+
+
+            let statusText =
+                "Waiting for rider";
+
+
+            if(room.status === "ACCEPTED"){
+
+                statusText =
+                    "Rider accepted";
+
+            }
+
+
+            if(room.status === "ON_THE_WAY"){
+
+                statusText =
+                    "Delivery is on the way";
+
+            }
+
+
+            /*
+             * If another rider has already accepted
+             * the customer, show it as unavailable
+             * instead of allowing another rider to pick.
+             */
+
+            const pickedByAnother =
+                room.riderId &&
+                room.riderId !== riderUid;
+
+
+            if(pickedByAnother){
+
+                statusText =
+                    "Already picked by another rider";
+
+            }
+
+
+            const canPick =
+                room.status === "WAITING" &&
+                !pickedByAnother;
+
+
+            return `
+
+                <div class="customer-card">
+
+                    <div class="customer-card-top">
+
+                        <div>
+
+                            <div class="customer-name">
+                                ${escapeHtml(
+                                    room.customerName
+                                )}
+                            </div>
+
+                            <div class="customer-status">
+                                ${statusText}
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                    ${
+                        canPick
+
+                        ? `
+
+                            <button
+                                class="pick-button"
+                                onclick="pickCustomer('${key}')"
+                            >
+                                Pick Customer
+                            </button>
+
+                          `
+
+                        : room.riderId === riderUid
+
+                        ? `
+
+                            <button
+                                class="pick-button"
+                                onclick="openSelectedCustomer('${key}')"
+                            >
+                                Open Delivery
+                            </button>
+
+                          `
+
+                        : ""
+
+                    }
+
+                </div>
+
+            `;
+
+        }).join("");
+
+}
+
+
+/* =========================================================
+   PICK CUSTOMER
+========================================================= */
+
+async function pickCustomer(roomKey){
+
+    if(!riderUid){
+
+        return;
+
+    }
+
+
+    if(selectedRoomKey){
+
+        showActionNote(
+            "Finish or leave your current delivery first.",
+            true
+        );
+
+        return;
+
+    }
+
+
+    try{
+
+        /*
+         * Transaction prevents two riders from
+         * picking the same waiting customer at
+         * exactly the same time.
+         */
+
+        const roomRef =
+            db.ref(
+                "customer_rooms/" +
+                roomKey
+            );
+
+
+        const result =
+            await roomRef.transaction(
+                room => {
+
+                    if(!room){
+
+                        return;
+
+                    }
+
+
+                    if(room.status !== "WAITING"){
+
+                        return;
+
+                    }
+
+
+                    if(room.riderId){
+
+                        return;
+
+                    }
+
+
+                    room.status =
+                        "ACCEPTED";
+
+                    room.riderId =
+                        riderUid;
+
+                    room.acceptedAt =
+                        firebase.database.ServerValue.TIMESTAMP;
+
+
+                    return room;
+
+                }
+            );
+
+
+        if(!result.committed){
+
+            alert(
+                "This customer was already picked or is no longer available."
+            );
+
+            return;
+
+        }
+
+
+        selectedRoomKey =
+            roomKey;
+
+
+        openSelectedCustomer(
+            roomKey
+        );
+
+
+    }catch(error){
+
+        console.error(error);
+
+        alert(
+            "Unable to pick customer: " +
+            error.message
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   OPEN SELECTED CUSTOMER
+========================================================= */
+
+function openSelectedCustomer(roomKey){
+
+    selectedRoomKey =
+        roomKey;
+
+
+    db.ref(
+        "customer_rooms/" +
+        roomKey
+    ).once("value")
+    .then(snapshot => {
+
+        const room =
+            snapshot.val();
+
+
+        if(!room){
+
+            alert(
+                "Customer room no longer exists."
+            );
+
+            selectedRoomKey = null;
+
+            return;
+
+        }
+
+
+        /*
+         * Only the rider who owns the room can
+         * open the active delivery.
+         */
+
+        if(
+            room.riderId &&
+            room.riderId !== riderUid
+        ){
+
+            alert(
+                "This customer is assigned to another rider."
+            );
+
+            selectedRoomKey = null;
+
+            return;
+
+        }
+
+
+        document
+            .getElementById(
+                "activeDelivery"
+            )
+            .classList.remove(
+                "hidden"
+            );
+
+
+        document
+            .getElementById(
+                "selectedCustomerName"
+            )
+            .textContent =
+            room.customerName || "Customer";
+
+
+        updateDeliveryStatus(
+            room
+        );
+
+
+        updateCustomerLocation(
+            room
+        );
+
+
+        listenToSelectedRoom();
+
+        startRiderLocation();
+
+    });
+
+}
+
+
+/* =========================================================
+   LISTEN TO SELECTED ROOM
+========================================================= */
+
+function listenToSelectedRoom(){
+
+    if(!selectedRoomKey){
+
+        return;
+
+    }
+
+
+    const roomRef =
+        db.ref(
+            "customer_rooms/" +
+            selectedRoomKey
+        );
+
+
+    if(selectedRoomListener){
+
+        roomRef.off(
+            "value",
+            selectedRoomListener
+        );
+
+    }
+
+
+    selectedRoomListener =
+        roomRef.on(
+            "value",
+            snapshot => {
+
+                const room =
+                    snapshot.val();
+
+
+                if(!room){
+
+                    stopRiderLocation();
+
+                    selectedRoomKey = null;
+
+                    document
+                        .getElementById(
+                            "activeDelivery"
+                        )
+                        .classList.add(
+                            "hidden"
+                        );
+
+                    return;
+
+                }
+
+
+                updateDeliveryStatus(
+                    room
+                );
+
+
+                updateCustomerLocation(
+                    room
+                );
+
+            }
+        );
+
+
+    listenToMessages();
+
+}
+
+
+/* =========================================================
+   DELIVERY STATUS
+========================================================= */
+
+function updateDeliveryStatus(room){
+
+    const element =
+        document.getElementById(
+            "deliveryStatus"
+        );
+
+
+    const onWayButton =
+        document.getElementById(
+            "onWayButton"
+        );
+
+
+    const deliveredButton =
+        document.getElementById(
+            "deliveredButton"
+        );
+
+
+    if(room.status === "WAITING"){
+
+        element.textContent =
+            "Waiting for rider";
+
+        onWayButton.disabled =
+            true;
+
+        deliveredButton.disabled =
+            true;
+
+    }
+
+
+    else if(room.status === "ACCEPTED"){
+
+        element.textContent =
+            "Rider accepted customer";
+
+        onWayButton.disabled =
+            false;
+
+        deliveredButton.disabled =
+            true;
+
+    }
+
+
+    else if(room.status === "ON_THE_WAY"){
+
+        element.textContent =
+            "Rider is on the way";
+
+        onWayButton.disabled =
+            true;
+
+        deliveredButton.disabled =
+            false;
+
+    }
+
+
+    else if(room.status === "DELIVERED"){
+
+        element.textContent =
+            "Delivery complete";
+
+        onWayButton.disabled =
+            true;
+
+        deliveredButton.disabled =
+            true;
+
+    }
+
+}
+
+
+/* =========================================================
+   CUSTOMER LOCATION
+========================================================= */
+
+function updateCustomerLocation(room){
+
+    const element =
+        document.getElementById(
+            "customerLocation"
+        );
+
+
+    if(
+        !room.locationSharing ||
+        !room.customerLocation
+    ){
+
+        element.innerHTML =
+            "Customer location has not been shared.";
+
+        return;
+
+    }
+
+
+    const lat =
+        Number(
+            room.customerLocation.lat
+        );
+
+    const lng =
+        Number(
+            room.customerLocation.lng
+        );
+
+
+    if(
+        !Number.isFinite(lat) ||
+        !Number.isFinite(lng)
+    ){
+
+        element.textContent =
+            "Customer location is unavailable.";
+
+        return;
+
+    }
+
+
+    const mapsUrl =
+        "https://www.google.com/maps/search/?api=1&query=" +
+        encodeURIComponent(
+            lat + "," + lng
+        );
+
+
+    element.innerHTML =
+
+        "Customer is sharing their location." +
+
+        "<br>" +
+
+        "<a " +
+        "class='map-link' " +
+        "target='_blank' " +
+        "rel='noopener noreferrer' " +
+        "href='" +
+        mapsUrl +
+        "'>" +
+
+        "Open Customer Location in Google Maps" +
+
+        "</a>";
+
+}
+
+
+/* =========================================================
+   MARK ON THE WAY
+========================================================= */
+
+async function markOnTheWay(){
+
+    if(!selectedRoomKey){
+
+        return;
+
+    }
+
+
+    try{
+
+        await db.ref(
+            "customer_rooms/" +
+            selectedRoomKey
+        ).update({
+
+            status:"ON_THE_WAY",
+
+            onTheWayAt:
+                firebase.database.ServerValue.TIMESTAMP
+
+        });
+
+
+        showActionNote(
+            "Customer has been notified that you are on the way."
+        );
+
+
+    }catch(error){
+
+        console.error(error);
+
+        showActionNote(
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   MARK DELIVERED
+========================================================= */
+
+async function markDelivered(){
+
+    if(!selectedRoomKey){
+
+        return;
+
+    }
+
+
+    const confirmed =
+        confirm(
+            "Mark this customer as DELIVERED?"
+        );
+
+
+    if(!confirmed){
+
+        return;
+
+    }
+
+
+    try{
+
+        stopRiderLocation();
+
+
+        await db.ref(
+            "customer_rooms/" +
+            selectedRoomKey
+        ).update({
+
+            status:"DELIVERED",
+
+            deliveredAt:
+                firebase.database.ServerValue.TIMESTAMP
+
+        });
+
+
+        /*
+         * IMPORTANT:
+         * We intentionally DO NOT delete the room.
+         *
+         * The customer needs to see
+         * "Delivery Complete".
+         */
+
+
+        showActionNote(
+            "Delivery marked as delivered."
+        );
+
+
+        selectedRoomKey = null;
+
+
+        document
+            .getElementById(
+                "activeDelivery"
+            )
+            .classList.add(
+                "hidden"
+            );
+
+
+    }catch(error){
+
+        console.error(error);
+
+        showActionNote(
+            error.message,
+            true
+        );
+
+    }
+
+}
+
+
+/* =========================================================
+   BACK TO CUSTOMER LIST
+========================================================= */
+
+function backToCustomers(){
+
+    stopRiderLocation();
+
+
+    if(selectedRoomListener){
+
+        db.ref(
+            "customer_rooms/" +
+            selectedRoomKey
+        ).off(
+            "value",
+            selectedRoomListener
+        );
+
+    }
+
+
+    if(messagesListener){
+
+        db.ref(
+            "customer_rooms/" +
+            selectedRoomKey +
+            "/messages"
+        ).off(
+            "value",
+            messagesListener
+        );
+
+    }
+
+
+    selectedRoomListener = null;
+
+    messagesListener = null;
+
+    selectedRoomKey = null;
+
+
+    document
+        .getElementById(
+            "activeDelivery"
+        )
+        .classList.add(
+            "hidden"
+        );
+
+}
+
+
+/* =========================================================
+   CHAT LISTENER
+========================================================= */
+
+function listenToMessages(){
+
+    if(!selectedRoomKey){
+
+        return;
+
+    }
+
+
+    const messagesRef =
+        db.ref(
+            "customer_rooms/" +
+            selectedRoomKey +
+            "/messages"
+        );
+
+
+    messagesListener =
+        messagesRef.on(
+            "value",
+            snapshot => {
+
+                const messages =
+                    snapshot.val() || {};
+
+                renderMessages(
+                    messages
+                );
+
+            }
+        );
+
+}
+
+
+/* =========================================================
+   RENDER CHAT
+========================================================= */
+
+function renderMessages(messages){
+
+    const container =
+        document.getElementById(
+            "messages"
+        );
+
+
+    const list =
+        Object.keys(messages)
+        .map(key => ({
+
+            key:key,
+
+            ...messages[key]
+
+        }))
+        .sort(
+            (a,b) =>
+                Number(a.at || 0) -
+                Number(b.at || 0)
+        );
+
+
+    container.innerHTML =
+        list.map(message => {
+
+            const mine =
+                message.from === "rider";
+
+
+            return `
+
+                <div class="msg ${mine ? "mine" : ""}">
+
+                    <div class="meta">
+                        ${mine ? "You" : "Customer"}
+                    </div>
+
+                    ${escapeHtml(
+                        message.text
+                    )}
+
+                </div>
+
+            `;
+
+        }).join("");
+
+
+    container.scrollTop =
+        container.scrollHeight;
+
+}
+
+
+/* =========================================================
+   SEND MESSAGE
+========================================================= */
+
+function sendMessage(){
+
+    if(!selectedRoomKey){
+
+        return;
+
+    }
+
+
+    const input =
+        document.getElementById(
+            "messageInput"
+        );
+
+
+    const text =
+        input.value.trim();
+
+
+    if(!text){
+
+        return;
+
+    }
+
+
+    db.ref(
+        "customer_rooms/" +
+        selectedRoomKey +
+        "/messages"
+    ).push({
+
+        from:"rider",
+
+        text:text,
+
+        at:
+            firebase.database.ServerValue.TIMESTAMP
+
+    });
+
+
+    input.value = "";
+
+    input.focus();
+
+}
+
+
+/* =========================================================
+   ENTER KEY
+========================================================= */
+
+function handleMessageKey(event){
+
+    if(event.key === "Enter"){
+
+        event.preventDefault();
+
+        sendMessage();
+
+    }
+
+}
+
+
+/* =========================================================
+   RIDER LOCATION
+========================================================= */
+
+function startRiderLocation(){
+
+    /*
+     * Rider location is optional.
+     * Customer only needs the rider's location
+     * if the rider chooses to share it.
+     */
+
+    if(!navigator.geolocation){
+
+        return;
+
+    }
+
+
+    if(!selectedRoomKey){
+
+        return;
+
+    }
+
+
+    if(riderLocationWatchId !== null){
+
+        navigator.geolocation.clearWatch(
+            riderLocationWatchId
+        );
+
+    }
+
+
+    riderLocationWatchId =
+        navigator.geolocation.watchPosition(
+
+            position => {
+
+                if(!selectedRoomKey){
+
+                    return;
+
+                }
+
+
+                db.ref(
+                    "customer_rooms/" +
+                    selectedRoomKey +
+                    "/riderLocation"
+                ).set({
+
+                    lat:
+                        position.coords.latitude,
+
+                    lng:
+                        position.coords.longitude,
+
+                    accuracy:
+                        position.coords.accuracy,
+
+                    at:
+                        firebase.database.ServerValue.TIMESTAMP
+
+                });
+
+            },
+
+            error => {
+
+                console.log(
+                    "Rider location:",
+                    error.message
+                );
+
+            },
+
+            {
+
+                enableHighAccuracy:true,
+
+                maximumAge:5000,
+
+                timeout:15000
+
+            }
+
+        );
+
+}
+
+
+/* =========================================================
+   STOP RIDER LOCATION
+========================================================= */
+
+function stopRiderLocation(){
+
+    if(riderLocationWatchId !== null){
+
+        navigator.geolocation.clearWatch(
+            riderLocationWatchId
+        );
+
+        riderLocationWatchId = null;
+
+    }
+
+
+    if(selectedRoomKey){
+
+        db.ref(
+            "customer_rooms/" +
+            selectedRoomKey +
+            "/riderLocation"
+        ).remove();
+
+    }
+
+}
+
+
+/* =========================================================
+   REMOVE LISTENERS
+========================================================= */
+
+function removeListeners(){
+
+    if(customersListener){
+
+        db.ref(
+            "customer_rooms"
+        ).off(
+            "value",
+            customersListener
+        );
+
+        customersListener = null;
+
+    }
+
+
+    if(selectedRoomKey){
+
+        if(selectedRoomListener){
+
+            db.ref(
+                "customer_rooms/" +
+                selectedRoomKey
+            ).off(
+                "value",
+                selectedRoomListener
+            );
+
+        }
+
+
+        if(messagesListener){
+
+            db.ref(
+                "customer_rooms/" +
+                selectedRoomKey +
+                "/messages"
+            ).off(
+                "value",
+                messagesListener
+            );
+
+        }
+
+    }
+
+}
+
+
+/* =========================================================
+   AUTH STATE
+========================================================= */
+
+auth.onAuthStateChanged(
+    user => {
+
+        /*
+         * Do not automatically treat anonymous
+         * customers as riders.
+         *
+         * Rider page requires email/password login.
+         */
+
+        if(
+            user &&
+            !user.isAnonymous
+        ){
+
+            riderUid =
+                user.uid;
+
+            document
+                .getElementById(
+                    "loginCard"
+                )
+                .classList.add(
+                    "hidden"
+                );
+
+            document
+                .getElementById(
+                    "dashboard"
+                )
+                .classList.remove(
+                    "hidden"
+                );
+
+            document
+                .getElementById(
+                    "logoutButton"
+                )
+                .classList.remove(
+                    "hidden"
+                );
+
+            listenForCustomers();
+
+        }
+
+    }
+);
+
+
+/* =========================================================
+   PAGE CLEANUP
+========================================================= */
+
+window.addEventListener(
+    "beforeunload",
+    () => {
+
+        stopRiderLocation();
+
+        removeListeners();
+
+    }
+);
+
+</script>
+
+</body>
+</html>
