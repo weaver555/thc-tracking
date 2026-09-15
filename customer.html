@@ -505,32 +505,51 @@ async function createCustomerRoom(){
 
         await roomRef.set({
 
-            customerUid: customerUid,
+    customerUid: customerUid,
 
-            customerName: customerName,
+    customerName: customerName,
 
-            customerNameNormalized:
-                customerName.toUpperCase(),
+    customerNameNormalized:
+        customerName.toUpperCase(),
 
-            status: "WAITING",
+    status: "WAITING",
 
-            createdAt: now,
+    createdAt: now,
 
-            riderId: null,
+    riderId: null,
 
-            acceptedAt: null,
+    acceptedAt: null,
 
-            onTheWayAt: null,
+    onTheWayAt: null,
 
-            deliveredAt: null,
+    deliveredAt: null,
 
-            locationSharing: false,
+    locationSharing: false,
 
-            customerLocation: null,
+    customerLocation: null,
 
-            riderLocation: null
+    riderLocation: null,
 
-        });
+    messages: {}
+
+});
+
+
+await db.ref(
+    "active_customers/" + roomKey
+).set({
+
+    customerUid: customerUid,
+
+    customerName: customerName,
+
+    status: "WAITING",
+
+    createdAt: firebase.database.ServerValue.TIMESTAMP,
+
+    riderId: null
+
+});    
 
 
         /*
